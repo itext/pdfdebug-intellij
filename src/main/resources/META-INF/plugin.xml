@@ -1,0 +1,18 @@
+<idea-plugin>
+    <id>com.itextpdf.pdfdebug</id>
+    <name>pdfDebug</name>
+    <vendor email="support@itextpdf.com" url="http://www.itextpdf.com">iText</vendor>
+
+    <description><![CDATA[
+    iText 7 pdfDebug for IntelliJ
+    ]]></description>
+
+    <!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html
+         on how to target different products -->
+    <depends>com.intellij.modules.xdebugger</depends>
+    <actions>
+        <action class="com.itextpdf.pdfdebug.AlanAction" id="PdfDebugAction" description="Show pdfDebug Window" text="pdfDebug" icon="PdfIcons.ACTION_PDF_DEBUG">
+            <add-to-group group-id="XDebugger.ToolWindow.TopToolbar" anchor="last"/>
+        </action>
+    </actions>
+</idea-plugin>
