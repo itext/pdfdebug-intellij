@@ -103,16 +103,28 @@ public class AlanAction extends AnAction {
         }
     }
 
+    /**
+     * check if <code>vc</code> is referring to PdfDocument instance.
+     * @param vc <code>XValueContainer</code> instance from Variables JTree.
+     * @return JavaValue object if it is or null.
+     */
+    @Nullable
+    static JavaValue extractPdfDocument(XValueContainer vc) {
+        if(vc instanceof JavaValue) {
+            JavaValue jv = (JavaValue) vc;
+            String type = jv.getDescriptor().getDeclaredType();
+            if(TYPE_PDF_DOCUMENT.equals(type)) return jv;
+        }
+        return null;
+    }
+
     @Nullable
     private static JavaValue findPdfDocument(List vars) {
         for(Object v : vars) {
             if(v instanceof XValueNodeImpl) {
                 XValueContainer vc = ((XValueNodeImpl) v).getValueContainer();
-                if(vc instanceof JavaValue) {
-                    JavaValue jv = (JavaValue) vc;
-                    String type = jv.getDescriptor().getDeclaredType();
-                    if(TYPE_PDF_DOCUMENT.equals(type)) return jv;
-                }
+                JavaValue jv = extractPdfDocument(vc);
+                if(jv!=null) return jv;
             }
         }
         return null;
