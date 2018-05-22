@@ -39,19 +39,23 @@ abstract class CloneRemotePdfDocument {
                 if(result instanceof JavaValue) {
                     JavaValue jv = (JavaValue)result;
                     Value v = jv.getDescriptor().getValue();
-                    ArrayReference bar = (ArrayReference) v;
-                    List<Value> bvList = bar.getValues();
-                    int baSize = bvList.size();
-                    byte[] ba = new byte[baSize];
-                    for(int i=0;i<baSize;i++) {
-                        ByteValue bv = (ByteValue)bvList.get(i);
-                        ba[i] = bv.value();
-                    }
-                    try {
-                        PdfDocument newPdfDoc = PdfDocumentHelper.deserialize(ba);
-                        onCloneSuccess(newPdfDoc);
-                    } catch (Exception ex) {
-                        onCloneError(ex);
+                    if(v==null) {
+                        onCloneSuccess(null);
+                    } else {
+                        ArrayReference bar = (ArrayReference) v;
+                        List<Value> bvList = bar.getValues();
+                        int baSize = bvList.size();
+                        byte[] ba = new byte[baSize];
+                        for(int i=0;i<baSize;i++) {
+                            ByteValue bv = (ByteValue)bvList.get(i);
+                            ba[i] = bv.value();
+                        }
+                        try {
+                            PdfDocument newPdfDoc = PdfDocumentHelper.deserialize(ba);
+                            onCloneSuccess(newPdfDoc);
+                        } catch (Exception ex) {
+                            onCloneError(ex);
+                        }
                     }
                 } else {
                     onCloneError(new IllegalArgumentException("Unexpected type "+result.getClass()));
