@@ -21,6 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreePath;
 import java.awt.*;
@@ -30,9 +31,12 @@ public class PdfDebugProjectComponent implements ProjectComponent {
     private static final String NOT_READY_FOR_PLUGIN_MESSAGE = "Cannot get PdfDocument. "
             + "\nMake sure you create reader from stream or string and writer is set to DebugMode.";
     public static final String TYPE_PDF_DOCUMENT = "com.itextpdf.kernel.pdf.PdfDocument";
+    public static final String WIN_ID_PDFDEBUG = "pdfDebug";
     private Project project;
     private MessageBusConnection busConn;
     private volatile TreeSelectionListener variableSelectionListener;
+    private volatile Rups rups;
+    private volatile PdfDocument prevDoc;
     private JTree variablesTree;
 
     public PdfDebugProjectComponent(@NotNull Project proj) {
@@ -65,30 +69,23 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                 sess.addSessionListener(new XDebugSessionListener() {
                     @Override
                     public void sessionPaused() {
+                        Content varsContent = sess.getUI().findContent(DebuggerContentInfo.VARIABLES_CONTENT);
+                        variablesTree = (JTree) varsContent.getActionsContextComponent();
                         if(variableSelectionListener==null) {
-                            Content varsContent = sess.getUI().findContent(DebuggerContentInfo.VARIABLES_CONTENT);
-                            variablesTree = (JTree) varsContent.getActionsContextComponent();
-                            variableSelectionListener = e -> {
-                                TreePath path = e.getPath();
-                                if(path==null) {
-                                    hidePdfWindow();
-                                } else {
-                                    Object obj = path.getLastPathComponent();
-                                    if(obj instanceof XValueNodeImpl) {
-                                        XValueContainer vc = ((XValueNodeImpl) obj).getValueContainer();
-                                        JavaValue pdfJv = extractPdfDocument(vc);
-                                        if(pdfJv!=null) {
-                                            showPdfWindow(pdfJv);
-                                        } else {
-                                            hidePdfWindow();
-                                        }
+                            variableSelectionListener = new TreeSelectionListener() {
+                                @Override
+                                public void valueChanged(TreeSelectionEvent e) {
+                                    if(variablesTree.isValid()) {
+                                        updateRupsContent();
+                                    } else {
+                                        System.out.println("Ignoring transitional event");
                                     }
                                 }
                             };
                             variablesTree.addTreeSelectionListener(variableSelectionListener);
-                        } else {
-                            return;
                         }
+
+                        updateRupsContent();
                     }
                 });
             }
@@ -98,9 +95,27 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                 if(variableSelectionListener!=null) {
                     variablesTree.removeTreeSelectionListener(variableSelectionListener);
                 }
-                hidePdfWindow();
+                disposePdfWindow();
             }
         });
+    }
+
+    private void updateRupsContent() {
+        TreePath path = variablesTree.getSelectionPath();
+        if(path==null) {
+            disposePdfWindow();
+        } else {
+            Object obj = path.getLastPathComponent();
+            if(obj instanceof XValueNodeImpl) {
+                XValueContainer vc = ((XValueNodeImpl) obj).getValueContainer();
+                JavaValue pdfJv = extractPdfDocument(vc);
+                if(pdfJv!=null) {
+                    showPdfWindow(pdfJv);
+                } else {
+                    disposePdfWindow();
+                }
+            }
+        }
     }
 
     private void showPdfWindow(@NotNull JavaValue pdfDocVar) {
@@ -108,7 +123,7 @@ public class PdfDebugProjectComponent implements ProjectComponent {
         ContentFactory cFactory = ContentFactory.SERVICE.getInstance();
         JFrame ideaFrame = WindowManager.getInstance().getFrame(project);
 
-        ToolWindow pdfDebugWin = wm.getToolWindow("pdfDebug");
+        ToolWindow pdfDebugWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
         if(pdfDebugWin==null) {
             pdfDebugWin = wm.registerToolWindow("pdfDebug", false, ToolWindowAnchor.RIGHT);
         }
@@ -119,10 +134,16 @@ public class PdfDebugProjectComponent implements ProjectComponent {
             JPanel rupsHolder = new JPanel(new BorderLayout());
             content = cFactory.createContent(rupsHolder, name, true);
             pdfDebugWin.getContentManager().addContent(content);
-            final JComponent holder = content.getComponent();
-            pdfDebugWin.activate(() -> {
-                Dimension holderSize = holder.getSize();
-                final Rups rups = Rups.startNewPlugin(rupsHolder, holderSize, ideaFrame);
+        }
+        JComponent holderComp = content.getComponent();
+
+        Runnable afterActivateRunner = new Runnable() {
+            @Override
+            public void run() {
+                Dimension holderSize = holderComp.getSize();
+                if(rups==null) {
+                    rups = Rups.startNewPlugin(holderComp, holderSize, ideaFrame);
+                }
                 XDebugSession dSess = XDebuggerManager.getInstance(project).getCurrentSession();
                 new CloneRemotePdfDocument(pdfDocVar, dSess) {
                     @Override
@@ -130,8 +151,12 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                         if(newPdfDocument==null) {
                             LoggerHelper.error("잘 좀 해봐", PdfDebugProjectComponent.class);
                         } else {
-                            byte[] dbgBytes = PdfDocumentHelper.getDebugBytes(newPdfDocument);
-                            rups.loadDocumentFromRawContent(dbgBytes, name, null, true);
+                            boolean isEqual = rups.compareWithDocument(newPdfDocument, true);
+                            if(!isEqual) {
+                                byte[] dbgBytes = PdfDocumentHelper.getDebugBytes(newPdfDocument);
+                                rups.loadDocumentFromRawContent(dbgBytes, name, null, true);
+                                rups.highlightLastSavedChanges();
+                            }
                         }
                     }
 
@@ -140,22 +165,37 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                         System.out.println(t);
                     }
                 }.execute();
-            });
-        } else {
-            pdfDebugWin.activate(null);
-        }
+            }
+        };
+
+        ToolWindow finalPdfDebugWin = pdfDebugWin;
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ToolWindowManager wm = ToolWindowManager.getInstance(project);
+                ToolWindow pdfWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
+                if(pdfWin!=null) {
+                    finalPdfDebugWin.activate(afterActivateRunner);
+                }
+            }
+        });
     }
 
-    private void hidePdfWindow() {
+    private void disposePdfWindow() {
+        this.rups = null;
         SwingUtilities.invokeLater(() -> {
             ToolWindowManager wm = ToolWindowManager.getInstance(project);
-            wm.unregisterToolWindow("pdfDebug");
+            ToolWindow pdfWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
+            if(pdfWin!=null) {
+                wm.unregisterToolWindow(WIN_ID_PDFDEBUG);
+            }
+            prevDoc = null;
         });
     }
 
     @Override
     public void projectClosed() {
         busConn.disconnect();
-        hidePdfWindow();
+        disposePdfWindow();
     }
 }

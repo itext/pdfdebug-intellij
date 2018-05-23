@@ -31,3 +31,8 @@ build
 
 # OSX
 .DS_Store
+
+# Eclipse
+.classpath
+.project
+.settings
