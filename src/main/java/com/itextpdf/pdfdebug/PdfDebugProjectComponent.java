@@ -98,6 +98,7 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                 if(variableSelectionListener!=null) {
                     variablesTree.removeTreeSelectionListener(variableSelectionListener);
                 }
+                hidePdfWindow();
             }
         });
     }
@@ -146,8 +147,10 @@ public class PdfDebugProjectComponent implements ProjectComponent {
     }
 
     private void hidePdfWindow() {
-        ToolWindowManager wm = ToolWindowManager.getInstance(project);
-        wm.unregisterToolWindow("pdfDebug");
+        SwingUtilities.invokeLater(() -> {
+            ToolWindowManager wm = ToolWindowManager.getInstance(project);
+            wm.unregisterToolWindow("pdfDebug");
+        });
     }
 
     @Override
