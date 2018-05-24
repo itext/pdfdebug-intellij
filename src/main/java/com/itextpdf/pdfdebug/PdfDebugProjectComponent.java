@@ -75,10 +75,12 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                             variableSelectionListener = new TreeSelectionListener() {
                                 @Override
                                 public void valueChanged(TreeSelectionEvent e) {
+                                    // you'll not get diff highlight when removing below condition
+                                    // since we get unintended tree selection clearing event while mutating "Variables" tree.
                                     if(variablesTree.isValid()) {
                                         updateRupsContent();
                                     } else {
-                                        System.out.println("Ignoring transitional event");
+                                        // ignoring transitional event
                                     }
                                 }
                             };
