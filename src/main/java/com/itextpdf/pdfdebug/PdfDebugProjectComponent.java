@@ -182,14 +182,21 @@ public class PdfDebugProjectComponent implements ProjectComponent {
     }
 
     private void disposePdfWindow() {
-        this.rups = null;
-        SwingUtilities.invokeLater(() -> {
-            ToolWindowManager wm = ToolWindowManager.getInstance(project);
-            ToolWindow pdfWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
-            if(pdfWin!=null) {
-                wm.unregisterToolWindow(WIN_ID_PDFDEBUG);
+        if(this.rups!=null) {
+            this.rups.clearHighlights();
+            this.rups = null;
+        }
+
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ToolWindowManager wm = ToolWindowManager.getInstance(project);
+                ToolWindow pdfWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
+                if(pdfWin!=null) {
+                    wm.unregisterToolWindow(WIN_ID_PDFDEBUG);
+                }
+                prevDoc = null;
             }
-            prevDoc = null;
         });
     }
 
