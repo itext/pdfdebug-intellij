@@ -15,6 +15,9 @@ import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.xdebugger.*;
 import com.intellij.xdebugger.frame.XValueContainer;
 import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree;
+import com.intellij.xdebugger.impl.ui.tree.XDebuggerTreeListener;
+import com.intellij.xdebugger.impl.ui.tree.nodes.XDebuggerTreeNode;
+import com.intellij.xdebugger.impl.ui.tree.nodes.XValueContainerNode;
 import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.rups.Rups;
@@ -27,6 +30,9 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.List;
 
 public class PdfDebugProjectComponent implements ProjectComponent {
     private static final String NOT_READY_FOR_PLUGIN_MESSAGE = "Cannot get PdfDocument. "
@@ -77,12 +83,30 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                             variableSelectionListener = new TreeSelectionListener() {
                                 @Override
                                 public void valueChanged(TreeSelectionEvent e) {
-                                    updateRupsContent();
+                                    if(e.isAddedPath()) {
+                                        updateRupsContent();
+                                    }
                                 }
                             };
                             variablesTree.addTreeSelectionListener(variableSelectionListener);
-                        } else {
-                            requestUpdateRupsContent();
+                            variablesTree.addTreeListener(new XDebuggerTreeListener() {
+                                @Override
+                                public void childrenLoaded(@NotNull XDebuggerTreeNode node, @NotNull List<XValueContainerNode<?>> children, boolean last) {
+                                    // only for root node
+                                    if(node.getParent()==null) {
+                                        // a dirty hack to get stable selection state
+                                        // currently I didn't find better way
+                                        Timer nodeRestoreWaiter = new Timer(500, new ActionListener() {
+                                            @Override
+                                            public void actionPerformed(ActionEvent e) {
+                                                updateRupsContent();
+                                            }
+                                        });
+                                        nodeRestoreWaiter.setRepeats(false);
+                                        nodeRestoreWaiter.start();
+                                    }
+                                }
+                            });
                         }
                     }
                 });
@@ -92,33 +116,16 @@ public class PdfDebugProjectComponent implements ProjectComponent {
             public void processStopped(@NotNull XDebugProcess debugProcess) {
                 if(variableSelectionListener!=null) {
                     variablesTree.removeTreeSelectionListener(variableSelectionListener);
+                    variablesTree = null;
                 }
                 disposePdfWindow();
             }
         });
     }
 
-    private void requestUpdateRupsContent() {
-        if(EventQueue.isDispatchThread()) {
-            updateRupsContent();
-        } else {
-            EventQueue.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    updateRupsContent();
-                }
-            });
-        }
-    }
-
-    /** didn't find better way to check if the Tree is in busy mode */
-    private static boolean isBusyMode(@NotNull XDebuggerTree tree) {
-        return tree.getRoot().getChildCount()<=1;
-    }
-
     private void updateRupsContent() {
+        ApplicationManager.getApplication().assertIsDispatchThread();
         if(variablesTree==null) return;
-        if(isBusyMode(variablesTree)) return;
 
         TreePath path = variablesTree.getSelectionPath();
         if(path==null) {
@@ -200,10 +207,10 @@ public class PdfDebugProjectComponent implements ProjectComponent {
     }
 
     private void disposePdfWindow() {
-        if(this.rups!=null) {
-            this.rups.clearHighlights();
-            this.rups = null;
-        }
+        if(this.rups==null) return;
+
+        this.rups.clearHighlights();
+        this.rups = null;
 
         SwingUtilities.invokeLater(new Runnable() {
             @Override
