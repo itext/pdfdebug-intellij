@@ -22,6 +22,7 @@ import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.rups.Rups;
 import com.itextpdf.rups.model.LoggerHelper;
+import icons.PdfIcons;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -158,6 +159,7 @@ public class PdfDebugProjectComponent implements ProjectComponent {
         ToolWindow pdfDebugWin = wm.getToolWindow(WIN_ID_PDFDEBUG);
         if(pdfDebugWin==null) {
             pdfDebugWin = wm.registerToolWindow("pdfDebug", false, ToolWindowAnchor.RIGHT);
+            pdfDebugWin.setIcon(PdfIcons.ACTION_PDF_DEBUG);
         }
 
         String name = pdfDocVar.getName();
