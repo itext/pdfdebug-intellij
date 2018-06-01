@@ -1,5 +1,6 @@
 package com.itextpdf.pdfdebug;
 
+import ch.qos.logback.core.util.StatusPrinter;
 import com.intellij.debugger.engine.JavaValue;
 import com.intellij.debugger.ui.DebuggerContentInfo;
 import com.intellij.openapi.application.ApplicationManager;
@@ -183,7 +184,7 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                     @Override
                     void onCloneSuccess(PdfDocument newPdfDocument) {
                         if(newPdfDocument==null) {
-                            LoggerHelper.error("잘 좀 해봐", PdfDebugProjectComponent.class);
+                            LoggerHelper.error(NOT_READY_FOR_PLUGIN_MESSAGE, PdfDebugProjectComponent.class);
                         } else {
                             boolean isEqual = rups.compareWithDocument(newPdfDocument, true);
                             if(!isEqual) {
