@@ -3,7 +3,10 @@ iText pdfDebug for IntelliJ IDEA
 
 # available version
 8.1 or higher
-[https://docs.google.com/spreadsheets/d/1RFdA9HSstw0Qg5K_hJm0pSzCCQsXaJI3Z6gx0E3qFTU/edit?usp=sharing](Here's my tested results.)
+
+Here's my tested results.
+
+[https://docs.google.com/spreadsheets/d/1RFdA9HSstw0Qg5K_hJm0pSzCCQsXaJI3Z6gx0E3qFTU/edit?usp=sharing](https://docs.google.com/spreadsheets/d/1RFdA9HSstw0Qg5K_hJm0pSzCCQsXaJI3Z6gx0E3qFTU/edit?usp=sharing)
 
 # build
 ```
