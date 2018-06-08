@@ -39,3 +39,6 @@ build
 
 # maven
 bin
+
+# Visual Studio Code
+.vscode

@@ -28,10 +28,7 @@ dependencies {
 
 intellij {
     version '172.3317.6'
-    patchPluginXml.untilBuild = '2018.*'
 }
 patchPluginXml {
-    changeNotes """
-      Add change notes here.<br>
-      <em>most HTML tags may be used</em>"""
+    untilBuild = '2018.*'
 }
