@@ -161,8 +161,10 @@ public class PdfDebugProjectComponent implements ProjectComponent {
             @Override
             public void processStopped(@NotNull XDebugProcess debugProcess) {
                 if(variableSelectionListener!=null) {
-                    variablesTree.removeTreeSelectionListener(variableSelectionListener);
-                    variablesTree = null;
+                    if(variablesTree!=null) {
+                        variablesTree.removeTreeSelectionListener(variableSelectionListener);
+                        variablesTree = null;
+                    }
                 }
                 disposePdfWindow();
             }
