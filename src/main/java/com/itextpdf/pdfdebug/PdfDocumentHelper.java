@@ -60,14 +60,7 @@ import java.lang.reflect.Method;
  * @author alangoo
  */
 class PdfDocumentHelper {
-    public static final String CLASS_TYPE = "com.itextpdf.kernel.pdf.PdfDocument";
-    public static final String METHOD_SIGNATURE = "()[B";
-    public static final String METHOD_NAME = "getSerializedBytes";
-
-    private static final String NOT_READY_FOR_PLUGIN_MESSAGE = "Cannot get PdfDocument. "
-            + "\nMake sure you create reader from stream or string and writer is set to DebugMode.";
-
-    private static final String DOCUMENT_IS_CLOASED_MESSAGE = "The document was closed.";
+    private static final String DOCUMENT_IS_CLOSED_MESSAGE = "The document was closed.";
 
     private static final String DEBUG_BYTES_METHOD_NAME = "getDebugBytes";
     private static Method getDebugBytesMethod;
@@ -93,7 +86,7 @@ class PdfDocumentHelper {
 
     static byte[] getDebugBytes(@NotNull PdfDocument pdfDoc) {
         if (pdfDoc.isClosed()) {
-            LoggerHelper.warn(DOCUMENT_IS_CLOASED_MESSAGE, PdfDocumentHelper.class);
+            LoggerHelper.warn(DOCUMENT_IS_CLOSED_MESSAGE, PdfDocumentHelper.class);
             return null;
         }
         PdfWriter writer = pdfDoc.getWriter();
