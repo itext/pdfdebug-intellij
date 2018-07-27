@@ -5,8 +5,8 @@ plugins {
     id 'org.jetbrains.intellij' version '0.3.2'
 }
 
-group 'com.hancom.global'
-version '1.0-SNAPSHOT'
+group 'com.itextpdf'
+version '2.0.0-SNAPSHOT'
 
 sourceCompatibility = 1.8
 
@@ -14,6 +14,9 @@ repositories {
     mavenCentral()
     maven {
         url "https://repo.itextsupport.com/snapshot/"
+    }
+    maven {
+        url "https://repo.itextsupport.com/releases/"
     }
 }
 
