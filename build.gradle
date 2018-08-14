@@ -12,6 +12,7 @@ sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
+    mavenLocal()    // to share dependencies from local maven repository
     maven {
         url "https://repo.itextsupport.com/snapshot/"
     }

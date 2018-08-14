@@ -60,12 +60,11 @@ import com.intellij.util.messages.MessageBusConnection;
 import com.intellij.xdebugger.*;
 import com.intellij.xdebugger.frame.XValueContainer;
 import com.intellij.xdebugger.impl.ui.tree.XDebuggerTree;
-import com.intellij.xdebugger.impl.ui.tree.XDebuggerTreeListener;
-import com.intellij.xdebugger.impl.ui.tree.nodes.XDebuggerTreeNode;
-import com.intellij.xdebugger.impl.ui.tree.nodes.XValueContainerNode;
 import com.intellij.xdebugger.impl.ui.tree.nodes.XValueNodeImpl;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.rups.Rups;
+import com.itextpdf.rups.event.RupsEvent;
 import com.itextpdf.rups.model.LoggerHelper;
 import icons.PdfIcons;
 import org.jetbrains.annotations.NotNull;
@@ -76,9 +75,10 @@ import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.TreePath;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Observable;
+import java.util.Observer;
 
 public class PdfDebugProjectComponent implements ProjectComponent {
     private static final String NOT_READY_FOR_PLUGIN_MESSAGE = "Cannot get PdfDocument. "
@@ -135,24 +135,6 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                                 }
                             };
                             variablesTree.addTreeSelectionListener(variableSelectionListener);
-                            variablesTree.addTreeListener(new XDebuggerTreeListener() {
-                                @Override
-                                public void childrenLoaded(@NotNull XDebuggerTreeNode node, @NotNull List<XValueContainerNode<?>> children, boolean last) {
-                                    // only for root node
-                                    if(node.getParent()==null) {
-                                        // a dirty hack to get stable selection state
-                                        // currently I didn't find better way
-                                        Timer nodeRestoreWaiter = new Timer(500, new ActionListener() {
-                                            @Override
-                                            public void actionPerformed(ActionEvent e) {
-                                                updateRupsContent();
-                                            }
-                                        });
-                                        nodeRestoreWaiter.setRepeats(false);
-                                        nodeRestoreWaiter.start();
-                                    }
-                                }
-                            });
                         }
                     }
                 });
@@ -232,18 +214,40 @@ public class PdfDebugProjectComponent implements ProjectComponent {
                         if(newPdfDocument==null) {
                             LoggerHelper.error(NOT_READY_FOR_PLUGIN_MESSAGE, PdfDebugProjectComponent.class);
                         } else {
-                            boolean isEqual = rups.compareWithDocument(newPdfDocument, true);
-                            if(!isEqual) {
+                            ByteArrayInputStream bais = null;
+                            try {
                                 byte[] dbgBytes = PdfDocumentHelper.getDebugBytes(newPdfDocument);
-                                rups.loadDocumentFromRawContent(dbgBytes, name, null, true);
-                                rups.highlightLastSavedChanges();
+                                bais = new ByteArrayInputStream(dbgBytes);
+                                PdfReader reader = new PdfReader(bais);
+                                PdfDocument tempDoc = new PdfDocument(reader);
+
+                                boolean isEqual = rups.compareWithDocument(tempDoc, true);
+                                if(!isEqual) {
+                                    listenOnetimeForHighlight(rups);
+                                    rups.loadDocumentFromRawContent(dbgBytes, name, null, true);
+                                } else {
+                                    rups.highlightLastSavedChanges();
+                                }
+                            } catch (Exception ex) {
+                                LoggerHelper.error("Error while reading pdf file.", ex, PdfDebugProjectComponent.class);
+                                ex.printStackTrace();
+                            } finally {
+                                try {
+                                    if(bais!=null) bais.close();
+                                } catch (IOException ioex) {
+                                    // never happens
+                                }
                             }
                         }
                     }
 
                     @Override
                     void onCloneError(Throwable t) {
-                        System.out.println(t);
+                        Exception ex = null;
+                        if(t instanceof Exception) {
+                            ex = (Exception) t;
+                        }
+                        LoggerHelper.warn("Failed to reconstruct PdfDocument instance", ex, PdfDebugProjectComponent.class);
                     }
                 }.execute();
             }
@@ -253,6 +257,28 @@ public class PdfDebugProjectComponent implements ProjectComponent {
         if(pdfWin!=null) {
             pdfDebugWin.activate(afterActivateRunner);
         }
+    }
+
+    private static void listenOnetimeForHighlight(Rups rups) {
+        final Observer openObserver = new Observer() {
+            @Override
+            public void update(Observable o, Object arg) {
+                if (!(arg instanceof RupsEvent)) return;
+                RupsEvent re = (RupsEvent) arg;
+                // only cares for OPEN_DOCUMENT_POST_EVENT
+                if(re.getType()!=RupsEvent.OPEN_DOCUMENT_POST_EVENT) return;
+                Observer listener = this;
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        rups.highlightLastSavedChanges();
+                        rups.unregisterEventObserver(listener);
+                    }
+                });
+            }
+        };
+
+        rups.registerEventObserver(openObserver);
     }
 
     private void disposePdfWindow() {
