@@ -34,5 +34,5 @@ intellij {
     version '172.3317.6'
 }
 patchPluginXml {
-    untilBuild = '2018.*'
+    untilBuild = '182.*'
 }
