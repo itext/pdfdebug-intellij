@@ -22,7 +22,7 @@ repositories {
 }
 
 dependencies {
-    compile ('com.itextpdf:itext-rups:7.1.9-SNAPSHOT') {
+    compile ('com.itextpdf:itext-rups:7.1.10-SNAPSHOT') {
         exclude group: 'xml-apis', module: 'xml-apis'
     }
     /* http://mohammed-technical.blogspot.kr/2016/03/getting-jdk-information-in-gradle-to.html */
