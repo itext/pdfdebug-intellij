@@ -1,8 +1,6 @@
 /*
- * $Id$
- *
  * This file is part of the iText (R) project.
- * Copyright (c) 2007-2018 iText Group NV
+ * Copyright (c) 2007-2020 iText Group NV
  * Authors: Bruno Lowagie et al.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -61,7 +59,6 @@ import java.util.List;
 
 /**
  * Copy PdfDocument instance from debug target VM using object serialization.
- * @author alangoo
  */
 abstract class CloneRemotePdfDocument {
     private JavaValue valPdfDoc;

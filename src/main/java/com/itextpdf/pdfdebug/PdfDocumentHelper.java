@@ -1,8 +1,6 @@
 /*
- * $Id$
- *
  * This file is part of the iText (R) project.
- * Copyright (c) 2007-2018 iText Group NV
+ * Copyright (c) 2007-2020 iText Group NV
  * Authors: Bruno Lowagie et al.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -57,7 +55,6 @@ import java.lang.reflect.Method;
 
 /**
  * a utility class handling serialization of PdfDocument instances.
- * @author alangoo
  */
 class PdfDocumentHelper {
     private static final String DOCUMENT_IS_CLOSED_MESSAGE = "The document was closed.";
